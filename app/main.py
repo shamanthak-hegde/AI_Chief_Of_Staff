@@ -1,10 +1,14 @@
+import os
+
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.core.logging import setup_logging
+from app.db.init_db import init_db
 from app.db.session import get_conn
 from app.ingest.enron import ingest_enron
+from app.ingest.slack import ingest_slack
 from app.services.conflict_detector import ConflictDetector
 from app.services.extractor import ExtractorService
 from app.services.kpr_builder import KPRBuilder
@@ -26,6 +30,17 @@ class EnronIngestRequest(BaseModel):
     limit: int = 0
 
 
+class SlackIngestRequest(BaseModel):
+    path: str
+    limit: int = 0
+
+
+@app.on_event("startup")
+def ensure_storage() -> None:
+    os.makedirs("data", exist_ok=True)
+    init_db()
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -34,6 +49,11 @@ def health() -> dict:
 @app.post("/ingest/enron")
 def ingest_enron_endpoint(payload: EnronIngestRequest) -> dict:
     return ingest_enron(payload.path, payload.limit)
+
+
+@app.post("/ingest/slack")
+def ingest_slack_endpoint(payload: SlackIngestRequest) -> dict:
+    return ingest_slack(payload.path, payload.limit)
 
 
 @app.post("/analyze/turn/{turn_id}")
@@ -51,7 +71,7 @@ def analyze_turn(turn_id: int, response: Response) -> dict:
 
     turn_text = row[0]
     try:
-        result = extractor_service.extract_turn(turn_text)
+        result = extractor_service.extract_turn(turn_text, turn_id=turn_id)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001

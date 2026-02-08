@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from app.db.session import get_conn
 from app.llm.openai_client import OpenAIClient
 from app.schemas.extraction import Extraction
+from app.services.cache import get_embedding_cache, set_embedding_cache
 from app.services.embeddings import cosine_similarity
 from app.services.extractor import ExtractorService
 
@@ -37,7 +38,7 @@ class KPRBuilder:
                     raise ValueError("Turn not found")
                 turn_text = row[0]
 
-                extraction_result = self._extractor.extract_turn(turn_text)
+                extraction_result = self._extractor.extract_turn(turn_text, turn_id=turn_id)
                 extraction = extraction_result.extraction
 
                 cursor.execute(
@@ -63,7 +64,10 @@ class KPRBuilder:
                     item_type = item["type"]
                     title = item["title"]
 
-                    embedding = self._client.embed(proposed_summary)
+                    embedding = get_embedding_cache(self._client.model_name, proposed_summary)
+                    if embedding is None:
+                        embedding = self._client.embed(proposed_summary)
+                        set_embedding_cache(self._client.model_name, proposed_summary, embedding)
                     match = self._find_best_match(cursor, embedding)
 
                     if match:

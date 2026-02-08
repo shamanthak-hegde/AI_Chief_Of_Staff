@@ -125,15 +125,21 @@ class SlackReader:
             # Skip subtype messages (like 'channel_join', etc.) if needed, 
             # but for now we keep everything that constitutes a message.
             
+            msg_ts = msg.get("ts")
+            thread_ts = msg.get("thread_ts") or msg_ts
             processed_msg = {
+                "platform": "slack",
+                "external_id": f"{channel_id}:{msg_ts}",
                 "channel_id": channel_id,
+                "thread_id": thread_ts,
                 "user": msg.get("user"),
                 "text": msg.get("text"),
-                "ts": msg.get("ts"),
+                "ts": msg_ts,
                 "type": msg.get("type"),
                 "subtype": msg.get("subtype"),
                 "reactions": [],
-                "replies": []
+                "replies": [],
+                "raw_json": msg,
             }
 
             # Process reactions
@@ -150,11 +156,17 @@ class SlackReader:
                 logging.debug(f"Fetching replies for thread {msg['ts']} in {channel_id}...")
                 replies = self.fetch_replies(channel_id, msg["thread_ts"])
                 for reply in replies:
+                     reply_ts = reply.get("ts")
                      processed_reply = {
+                        "platform": "slack",
+                        "external_id": f"{channel_id}:{reply_ts}",
+                        "channel_id": channel_id,
+                        "thread_id": thread_ts,
                         "user": reply.get("user"),
                         "text": reply.get("text"),
-                        "ts": reply.get("ts"),
-                        "reactions": []
+                        "ts": reply_ts,
+                        "reactions": [],
+                        "raw_json": reply,
                     }
                      if "reactions" in reply:
                         for reaction in reply["reactions"]:

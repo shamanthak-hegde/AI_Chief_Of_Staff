@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass
 from typing import Optional
 
@@ -6,6 +7,7 @@ from app.llm.openai_client import OpenAIClient
 
 
 RETRY_ATTEMPTS = 2
+BACKOFF_BASE_SECONDS = 0.5
 
 
 @dataclass
@@ -88,9 +90,11 @@ class ConflictDetector:
 
     def _run_with_retries(self, existing_summary: str, proposed_summary: str):
         last_error: Exception | None = None
-        for _ in range(RETRY_ATTEMPTS + 1):
+        for attempt in range(RETRY_ATTEMPTS + 1):
             try:
                 return self._client.run_conflict_check(existing_summary, proposed_summary)
             except Exception as exc:  # noqa: BLE001
                 last_error = exc
+                if attempt < RETRY_ATTEMPTS:
+                    time.sleep(BACKOFF_BASE_SECONDS * (2**attempt))
         raise last_error if last_error else RuntimeError("Conflict check failed")

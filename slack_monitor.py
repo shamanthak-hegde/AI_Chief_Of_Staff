@@ -138,15 +138,21 @@ class SlackMonitor:
                 current_data = []
 
         for msg in new_messages:
+            msg_ts = msg.get("ts")
+            thread_ts = msg.get("thread_ts") or msg_ts
             processed_msg = {
+                "platform": "slack",
+                "external_id": f"{channel_id}:{msg_ts}",
                 "channel_id": channel_id,
+                "thread_id": thread_ts,
                 "user": msg.get("user"),
                 "text": msg.get("text"),
-                "ts": msg.get("ts"),
+                "ts": msg_ts,
                 "type": msg.get("type"),
                 "timestamp_human": datetime.fromtimestamp(float(msg['ts'])).strftime('%Y-%m-%d %H:%M:%S'),
                 "reactions": [],
-                "replies": []
+                "replies": [],
+                "raw_json": msg,
             }
 
             if "reactions" in msg:
@@ -161,11 +167,17 @@ class SlackMonitor:
                 logging.debug(f"Fetching replies for thread {msg['ts']}...")
                 replies = self.fetch_replies(channel_id, msg["thread_ts"])
                 for reply in replies:
+                     reply_ts = reply.get("ts")
                      processed_reply = {
+                        "platform": "slack",
+                        "external_id": f"{channel_id}:{reply_ts}",
+                        "channel_id": channel_id,
+                        "thread_id": thread_ts,
                         "user": reply.get("user"),
                         "text": reply.get("text"),
-                        "ts": reply.get("ts"),
-                        "timestamp_human": datetime.fromtimestamp(float(reply['ts'])).strftime('%Y-%m-%d %H:%M:%S')
+                        "ts": reply_ts,
+                        "timestamp_human": datetime.fromtimestamp(float(reply['ts'])).strftime('%Y-%m-%d %H:%M:%S'),
+                        "raw_json": reply,
                     }
                      processed_msg["replies"].append(processed_reply)
 

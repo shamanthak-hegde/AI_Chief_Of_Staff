@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import Optional
 
 from openai import OpenAI
@@ -27,6 +28,7 @@ class OpenAIClient:
     def run_extraction(self, prompt_text: str) -> Extraction:
         response = self._client.responses.parse(
             model=self._model,
+            temperature=0,
             input=[
                 {
                     "role": "system",
@@ -46,11 +48,19 @@ class OpenAIClient:
         return parsed
 
     def embed(self, text: str) -> list[float]:
-        response = self._client.embeddings.create(
-            model=self._embeddings_model,
-            input=text,
-        )
-        return response.data[0].embedding
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                response = self._client.embeddings.create(
+                    model=self._embeddings_model,
+                    input=text,
+                )
+                return response.data[0].embedding
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+                if attempt < 2:
+                    time.sleep(0.5 * (2**attempt))
+        raise last_error if last_error else RuntimeError("Embedding request failed")
 
     def run_conflict_check(self, existing_summary: str, proposed_summary: str) -> ConflictCheck:
         prompt = (
@@ -62,6 +72,7 @@ class OpenAIClient:
         )
         response = self._client.responses.parse(
             model=self._model,
+            temperature=0,
             input=[
                 {
                     "role": "system",

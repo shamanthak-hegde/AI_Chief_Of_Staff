@@ -128,6 +128,23 @@ CREATE TABLE IF NOT EXISTS comm_edges (
     last_ts TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (src_person_id, dst_person_id)
 );
+
+CREATE TABLE IF NOT EXISTS embedding_cache (
+    model VARCHAR(100) NOT NULL,
+    text_hash VARCHAR(64) NOT NULL,
+    embedding JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (model, text_hash)
+);
+
+CREATE TABLE IF NOT EXISTS extraction_cache (
+    model VARCHAR(100) NOT NULL,
+    turn_id INTEGER NOT NULL,
+    text_hash VARCHAR(64) NOT NULL,
+    extracted_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (model, turn_id)
+);
 """
 
 

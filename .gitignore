@@ -1,2 +1,7 @@
 .venv/
 data/
+.env
+slack_data.json
+slack_monitor.log
+slack_setup.md
+monitor_state.json

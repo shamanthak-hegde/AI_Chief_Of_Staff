@@ -1,2 +1,7 @@
 slack_sdk
 python-dotenv
+fastapi
+uvicorn
+pydantic-settings
+psycopg2-binary
+openai
